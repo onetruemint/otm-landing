@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
 import { Project } from "@/lib/types";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
@@ -9,20 +9,22 @@ import Footer from "@/components/Footer";
 export const revalidate = 60;
 
 async function getProjects(): Promise<Project[]> {
-  if (!supabase) return [];
+  if (!db) return [];
 
-  const { data, error } = await supabase
-    .from("projects")
-    .select("*")
-    .order("pinned", { ascending: false })
-    .order("display_order", { ascending: true });
+  try {
+    const snapshot = await db
+      .collection("projects")
+      .orderBy("pinned", "desc")
+      .orderBy("display_order", "asc")
+      .get();
 
-  if (error) {
-    console.error("Failed to fetch projects:", error.message);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() }) as Project,
+    );
+  } catch (error) {
+    console.error("Failed to fetch projects:", error);
     return [];
   }
-
-  return data ?? [];
 }
 
 export default async function Home() {
